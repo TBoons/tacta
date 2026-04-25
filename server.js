@@ -2498,6 +2498,22 @@ function renderTactaPage() {
           color: var(--muted);
         }
 
+        .player-last-points {
+          margin-top: 8px;
+          font-size: 0.82rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          color: var(--muted);
+        }
+
+        .player-last-points.play {
+          color: #d8ffea;
+        }
+
+        .player-last-points.penalty {
+          color: #ffd8d2;
+        }
+
         .progress-bar {
           margin-top: 8px;
           width: 100%;
@@ -3035,6 +3051,18 @@ function renderTactaPage() {
           return null;
         }
 
+        function getLatestPlayerScoreAction(game, colorId) {
+          if (!game || !colorId) {
+            return null;
+          }
+
+          return (game.actions || []).find(function(action) {
+            return action &&
+              action.color === colorId &&
+              (action.kind === 'play' || action.kind === 'penalty');
+          }) || null;
+        }
+
         function getLeaderState(game) {
           const joinedPlayers = (game.players || []).filter(function(player) {
             return player.joined;
@@ -3196,6 +3224,14 @@ function renderTactaPage() {
           scoreboard.innerHTML = players.map(function(player) {
             const currentClass = player.color === state.color ? ' current' : '';
             const progressPercent = Math.max(0, Math.min(100, (player.cardsPlayed / game.cardsPerPlayer) * 100));
+            const lastAction = state.mode === 'spectator' ? getLatestPlayerScoreAction(game, player.color) : null;
+            const lastPoints = lastAction
+              ? Math.max(Number(lastAction.points) || Math.abs(Number(lastAction.scoreDelta) || 0), 0)
+              : 0;
+            const lastPrefix = lastAction && lastAction.kind === 'play' ? '+' : '-';
+            const lastPointsHtml = lastAction
+              ? '<div class="player-last-points ' + (lastAction.kind === 'play' ? 'play' : 'penalty') + '">Last: ' + lastPrefix + lastPoints + '</div>'
+              : '';
 
             return '<div class="player-card' + currentClass + '" style="border-color:' + player.hex + '; --seat-color:' + player.hex + ';">'
               + '<div class="player-head">'
@@ -3207,6 +3243,7 @@ function renderTactaPage() {
               + '<div class="player-progress">'
               + '<div class="progress-meta"><span>' + player.cardsPlayed + ' played</span><span>' + player.cardsRemaining + ' left</span></div>'
               + '<div class="progress-bar"><div class="progress-fill" style="width:' + progressPercent + '%; background:' + player.hex + ';"></div></div>'
+              + lastPointsHtml
               + '</div>'
               + '</div>';
           }).join('');
