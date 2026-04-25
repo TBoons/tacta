@@ -291,6 +291,7 @@ function appendDetailedTactaAction(game, payload) {
     kind: payload.kind || 'score',
     delta: scoreDelta,
     scoreDelta,
+    points: Math.max(Number(payload.points) || Math.abs(scoreDelta) || 0, 0),
     cardsDelta: Number(payload.cardsDelta) || 0,
     at: payload.at,
     description: `${colorMeta ? colorMeta.label : payload.color} ${sign}${scoreDelta}`
@@ -1674,6 +1675,88 @@ function renderTactaPage() {
           background: rgba(47, 18, 14, 0.92);
         }
 
+        .score-flash {
+          position: fixed;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%) scale(0.9);
+          min-width: 150px;
+          padding: 16px 20px;
+          border-radius: 22px;
+          background:
+            linear-gradient(180deg, rgba(10, 10, 14, 0.98), rgba(7, 7, 11, 0.96)),
+            rgba(8, 8, 12, 0.96);
+          border: 1px solid rgba(201, 189, 255, 0.24);
+          box-shadow:
+            0 20px 48px rgba(0, 0, 0, 0.5),
+            0 0 28px rgba(82, 215, 255, 0.14);
+          text-align: center;
+          pointer-events: none;
+          z-index: 60;
+          opacity: 0;
+          transition: opacity 140ms ease, transform 140ms ease;
+        }
+
+        .score-flash.visible {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+
+        .score-flash::before {
+          content: "";
+          position: absolute;
+          inset: 8px;
+          pointer-events: none;
+          border-radius: 16px;
+          background:
+            linear-gradient(135deg, transparent 0 16%, rgba(255, 255, 255, 0.28) 16.8%, transparent 17.6%) top left / 38% 40% no-repeat,
+            linear-gradient(315deg, transparent 0 16%, rgba(255, 255, 255, 0.22) 16.8%, transparent 17.6%) bottom right / 38% 40% no-repeat,
+            linear-gradient(90deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.05));
+          mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+          -webkit-mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+          padding: 1px;
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          opacity: 0.86;
+        }
+
+        .score-flash-value {
+          position: relative;
+          font-size: 2rem;
+          font-weight: 800;
+          line-height: 1;
+          letter-spacing: 0.04em;
+        }
+
+        .score-flash-label {
+          position: relative;
+          margin-top: 6px;
+          font-size: 0.78rem;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--muted);
+        }
+
+        .score-flash.play {
+          color: #d8ffea;
+          border-color: rgba(102, 255, 187, 0.7);
+          box-shadow:
+            0 20px 48px rgba(0, 0, 0, 0.5),
+            0 0 28px rgba(102, 255, 187, 0.22);
+        }
+
+        .score-flash.penalty {
+          color: #ffd8d2;
+          border-color: rgba(255, 109, 87, 0.72);
+          box-shadow:
+            0 20px 48px rgba(0, 0, 0, 0.5),
+            0 0 28px rgba(255, 109, 87, 0.22);
+        }
+
         .view {
           margin-top: 12px;
         }
@@ -1904,9 +1987,9 @@ function renderTactaPage() {
 
         .scoreboard {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
           gap: 12px;
-          margin-top: 18px;
+          margin-top: 12px;
         }
 
         .player-card {
@@ -1997,15 +2080,15 @@ function renderTactaPage() {
         }
 
         .player-score {
-          font-size: clamp(2rem, 8vw, 2.8rem);
+          font-size: clamp(2.25rem, 9vw, 3.2rem);
           font-weight: 800;
           line-height: 1;
-          margin-top: 12px;
+          margin-top: 10px;
         }
 
         .player-meta {
-          margin-top: 8px;
-          font-size: 0.9rem;
+          margin-top: 6px;
+          font-size: 0.82rem;
           color: var(--muted);
         }
 
@@ -2214,6 +2297,22 @@ function renderTactaPage() {
             0 0 18px rgba(var(--player-rgb), 0.08);
         }
 
+        body.leader-theme-active {
+          background:
+            radial-gradient(circle at 16% 14%, rgba(var(--leader-rgb), 0.24), transparent 20%),
+            radial-gradient(circle at 82% 16%, rgba(var(--leader-rgb), 0.16), transparent 18%),
+            radial-gradient(circle at 56% 74%, rgba(var(--leader-rgb), 0.14), transparent 22%),
+            linear-gradient(180deg, rgba(var(--leader-rgb), 0.18) 0%, rgba(15, 11, 18, 0.96) 28%, var(--bg-2) 100%);
+        }
+
+        body.leader-theme-active .score-card.joined,
+        body.leader-theme-active .scores-panel {
+          border-color: rgba(var(--leader-rgb), 0.44);
+          box-shadow:
+            0 22px 50px rgba(0, 0, 0, 0.34),
+            0 0 28px rgba(var(--leader-rgb), 0.16);
+        }
+
         .control-copy {
           display: none;
         }
@@ -2229,8 +2328,154 @@ function renderTactaPage() {
           color: #ffe2a9;
         }
 
+        .watch-last-points {
+          margin-top: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: 16px;
+          background: rgba(18, 14, 22, 0.72);
+          border: 1px solid rgba(186, 162, 255, 0.22);
+        }
+
+        .watch-last-points-copy {
+          min-width: 0;
+        }
+
+        .watch-last-points-label {
+          font-size: 0.68rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--muted);
+        }
+
+        .watch-last-points-detail {
+          margin-top: 4px;
+          font-size: 0.88rem;
+          color: var(--ink);
+          line-height: 1.15;
+        }
+
+        .watch-last-points-value {
+          flex: 0 0 auto;
+          font-size: 1.2rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          line-height: 1;
+        }
+
+        .watch-last-points.play .watch-last-points-value {
+          color: #d8ffea;
+        }
+
+        .watch-last-points.penalty .watch-last-points-value {
+          color: #ffd8d2;
+        }
+
+        .last-points {
+          position: relative;
+          overflow: hidden;
+          margin-top: 12px;
+          padding: 12px 14px;
+          border-radius: 18px;
+          background:
+            linear-gradient(180deg, rgba(10, 10, 14, 0.98), rgba(7, 7, 11, 0.96)),
+            rgba(8, 8, 12, 0.96);
+          border: 1px solid rgba(201, 189, 255, 0.2);
+          box-shadow:
+            0 14px 32px rgba(0, 0, 0, 0.26),
+            0 0 22px rgba(82, 215, 255, 0.08);
+        }
+
+        .last-points::before {
+          content: "";
+          position: absolute;
+          inset: 8px;
+          pointer-events: none;
+          border-radius: 14px;
+          background:
+            linear-gradient(135deg, transparent 0 16%, rgba(255, 255, 255, 0.24) 16.8%, transparent 17.6%) top left / 34% 38% no-repeat,
+            linear-gradient(315deg, transparent 0 16%, rgba(255, 255, 255, 0.18) 16.8%, transparent 17.6%) bottom right / 34% 38% no-repeat,
+            linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+          mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+          -webkit-mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+          padding: 1px;
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          opacity: 0.76;
+        }
+
+        .last-points-row {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+        }
+
+        .last-points-copy {
+          min-width: 0;
+        }
+
+        .last-points-label {
+          font-size: 0.68rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--muted);
+        }
+
+        .last-points-detail {
+          margin-top: 4px;
+          font-size: 0.9rem;
+          color: var(--ink);
+          line-height: 1.2;
+        }
+
+        .last-points-time {
+          margin-top: 4px;
+          font-size: 0.74rem;
+          color: var(--muted);
+        }
+
+        .last-points-value {
+          position: relative;
+          flex: 0 0 auto;
+          font-size: 1.4rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          line-height: 1;
+        }
+
+        .last-points.play {
+          border-color: rgba(102, 255, 187, 0.38);
+          box-shadow:
+            0 14px 32px rgba(0, 0, 0, 0.26),
+            0 0 22px rgba(102, 255, 187, 0.14);
+        }
+
+        .last-points.play .last-points-value {
+          color: #d8ffea;
+        }
+
+        .last-points.penalty {
+          border-color: rgba(255, 109, 87, 0.38);
+          box-shadow:
+            0 14px 32px rgba(0, 0, 0, 0.26),
+            0 0 22px rgba(255, 109, 87, 0.14);
+        }
+
+        .last-points.penalty .last-points-value {
+          color: #ffd8d2;
+        }
+
         .scores-panel {
-          margin-top: 18px;
+          margin-top: 16px;
         }
 
         .scores-panel h2 {
@@ -2396,6 +2641,10 @@ function renderTactaPage() {
     <body>
       <div class="page">
         <div id="status" class="status" hidden></div>
+        <div id="scoreFlash" class="score-flash" hidden>
+          <div id="scoreFlashValue" class="score-flash-value"></div>
+          <div id="scoreFlashLabel" class="score-flash-label"></div>
+        </div>
 
         <section id="landingView" class="view">
           <div class="grid landing-grid">
@@ -2457,8 +2706,29 @@ function renderTactaPage() {
                   </div>
                 </div>
 
+                <div class="card scores-panel">
+                  <h2>Scores</h2>
+                  <div id="watchLastPoints" class="watch-last-points" hidden>
+                    <div class="watch-last-points-copy">
+                      <div class="watch-last-points-label">Last Points</div>
+                      <div id="watchLastPointsDetail" class="watch-last-points-detail"></div>
+                    </div>
+                    <div id="watchLastPointsValue" class="watch-last-points-value"></div>
+                  </div>
+                  <div id="scoreboard" class="scoreboard"></div>
+                  <div id="scoreboardEmpty" class="empty scoreboard-empty" hidden>Waiting for other players to join this game.</div>
+                </div>
+                <div id="lastPointsCard" class="last-points" hidden>
+                  <div class="last-points-row">
+                    <div class="last-points-copy">
+                      <div class="last-points-label">Last Points</div>
+                      <div id="lastPointsDetail" class="last-points-detail"></div>
+                      <div id="lastPointsTime" class="last-points-time"></div>
+                    </div>
+                    <div id="lastPointsValue" class="last-points-value"></div>
+                  </div>
+                </div>
                 <div id="scorePrompt" class="empty">Pick your color below.</div>
-                <div id="watchNote" class="empty watch-note" hidden>Watching this room live.</div>
                 <div id="gameOverNote" class="empty game-over-note" hidden>Game Over</div>
 
                 <div class="room-meta">
@@ -2491,11 +2761,6 @@ function renderTactaPage() {
                 <div id="seatPicker" class="seat-grid"></div>
               </div>
 
-              <div class="card scores-panel">
-                <h2>Other players</h2>
-                <div id="scoreboard" class="scoreboard"></div>
-                <div id="scoreboardEmpty" class="empty scoreboard-empty" hidden>Waiting for other players to join this game.</div>
-              </div>
             </div>
           </div>
         </section>
@@ -2515,7 +2780,8 @@ function renderTactaPage() {
           game: null,
           poller: null,
           scoreBusy: false,
-          statusTimer: null
+          statusTimer: null,
+          flashTimer: null
         };
 
         function sanitizeGameId(value) {
@@ -2550,6 +2816,7 @@ function renderTactaPage() {
 
         function applyPlayerTheme(colorId) {
           const body = document.body;
+          body.classList.remove('leader-theme-active');
           if (!colorId) {
             body.classList.remove('player-theme-active');
             body.style.removeProperty('--player-rgb');
@@ -2559,6 +2826,22 @@ function renderTactaPage() {
           const color = getColor(colorId);
           body.style.setProperty('--player-rgb', hexToRgb(color.hex));
           body.classList.add('player-theme-active');
+        }
+
+        function applyLeaderTheme(colorId) {
+          const body = document.body;
+          body.classList.remove('player-theme-active');
+          body.style.removeProperty('--player-rgb');
+
+          if (!colorId) {
+            body.classList.remove('leader-theme-active');
+            body.style.removeProperty('--leader-rgb');
+            return;
+          }
+
+          const color = getColor(colorId);
+          body.style.setProperty('--leader-rgb', hexToRgb(color.hex));
+          body.classList.add('leader-theme-active');
         }
 
         function getClientId() {
@@ -2601,6 +2884,36 @@ function renderTactaPage() {
           status.hidden = true;
           status.textContent = '';
           status.dataset.kind = '';
+        }
+
+        function showScoreFlash(kind, points) {
+          const flash = document.getElementById('scoreFlash');
+          const value = document.getElementById('scoreFlashValue');
+          const label = document.getElementById('scoreFlashLabel');
+
+          if (state.flashTimer) {
+            clearTimeout(state.flashTimer);
+            state.flashTimer = null;
+          }
+
+          flash.classList.remove('play', 'penalty', 'visible');
+          flash.hidden = false;
+          flash.classList.add(kind);
+          value.textContent = (kind === 'play' ? '+' : '-') + String(points);
+          label.textContent = kind === 'play' ? 'Points Added' : 'Points Lost';
+
+          requestAnimationFrame(function() {
+            flash.classList.add('visible');
+          });
+
+          state.flashTimer = setTimeout(function() {
+            flash.classList.remove('visible');
+            state.flashTimer = setTimeout(function() {
+              flash.hidden = true;
+              flash.classList.remove('play', 'penalty');
+              state.flashTimer = null;
+            }, 150);
+          }, 4000);
         }
 
         function syncUrl() {
@@ -2696,6 +3009,132 @@ function renderTactaPage() {
           }
         }
 
+        function getLatestScoreAction(game) {
+          return (game.actions || []).find(function(action) {
+            return action && (action.kind === 'play' || action.kind === 'penalty');
+          }) || null;
+        }
+
+        function getLatestRelevantScoreAction(game) {
+          if (!game) {
+            return null;
+          }
+
+          if (state.color) {
+            return (game.actions || []).find(function(action) {
+              return action &&
+                action.color === state.color &&
+                (action.kind === 'play' || action.kind === 'penalty');
+            }) || null;
+          }
+
+          if (state.mode === 'spectator') {
+            return getLatestScoreAction(game);
+          }
+
+          return null;
+        }
+
+        function getLeaderState(game) {
+          const joinedPlayers = (game.players || []).filter(function(player) {
+            return player.joined;
+          });
+
+          if (!joinedPlayers.length) {
+            return null;
+          }
+
+          const topScore = joinedPlayers.reduce(function(max, player) {
+            return Math.max(max, Number(player.score) || 0);
+          }, Number.NEGATIVE_INFINITY);
+
+          const leaders = joinedPlayers.filter(function(player) {
+            return (Number(player.score) || 0) === topScore;
+          });
+
+          return {
+            topScore,
+            leaders,
+            isTie: leaders.length > 1
+          };
+        }
+
+        function renderLastPoints(game) {
+          const card = document.getElementById('lastPointsCard');
+          const detail = document.getElementById('lastPointsDetail');
+          const time = document.getElementById('lastPointsTime');
+          const value = document.getElementById('lastPointsValue');
+          const action = getLatestRelevantScoreAction(game);
+
+          if (!action) {
+            card.hidden = true;
+            card.classList.remove('play', 'penalty');
+            detail.textContent = '';
+            time.textContent = '';
+            value.textContent = '';
+            return;
+          }
+
+          const actor = getColor(action.color);
+          const points = Math.max(Number(action.points) || Math.abs(Number(action.scoreDelta) || 0), 0);
+          const prefix = action.kind === 'play' ? '+' : '-';
+          const isViewer = Boolean(state.color && action.color === state.color);
+
+          card.hidden = false;
+          card.classList.remove('play', 'penalty');
+          card.classList.add(action.kind === 'play' ? 'play' : 'penalty');
+          value.textContent = prefix + String(points);
+
+          if (state.mode === 'spectator' && !state.color) {
+            detail.textContent = actor.label + (action.kind === 'play'
+              ? ' added ' + points + ' points'
+              : ' took -' + points + ' points');
+          } else if (isViewer) {
+            detail.textContent = action.kind === 'play'
+              ? 'You added ' + points + ' points'
+              : 'You took -' + points + ' points';
+          } else {
+            detail.textContent = actor.label + (action.kind === 'play'
+              ? ' added ' + points + ' points'
+              : ' took -' + points + ' points');
+          }
+
+          time.textContent = 'Updated ' + formatTime(action.at);
+        }
+
+        function renderWatchLastPoints(game) {
+          const card = document.getElementById('watchLastPoints');
+          const detail = document.getElementById('watchLastPointsDetail');
+          const value = document.getElementById('watchLastPointsValue');
+
+          if (!(state.mode === 'spectator' && !state.color)) {
+            card.hidden = true;
+            card.classList.remove('play', 'penalty');
+            detail.textContent = '';
+            value.textContent = '';
+            return;
+          }
+
+          const action = getLatestScoreAction(game);
+          if (!action) {
+            card.hidden = true;
+            card.classList.remove('play', 'penalty');
+            detail.textContent = '';
+            value.textContent = '';
+            return;
+          }
+
+          const actor = getColor(action.color);
+          const points = Math.max(Number(action.points) || Math.abs(Number(action.scoreDelta) || 0), 0);
+          const prefix = action.kind === 'play' ? '+' : '-';
+
+          card.hidden = false;
+          card.classList.remove('play', 'penalty');
+          card.classList.add(action.kind === 'play' ? 'play' : 'penalty');
+          detail.textContent = actor.label + ' ' + prefix + points;
+          value.textContent = prefix + String(points);
+        }
+
         function updateActionButtons() {
           const disabled = !state.color || state.scoreBusy || !state.game || state.game.gameOver;
           document.querySelectorAll('[data-play], [data-penalty]').forEach(function(button) {
@@ -2775,16 +3214,15 @@ function renderTactaPage() {
 
         function renderCurrentPlayer(game) {
           const prompt = document.getElementById('scorePrompt');
-          const watchNote = document.getElementById('watchNote');
           const gameOverNote = document.getElementById('gameOverNote');
           const controls = document.getElementById('scoreControls');
           const pickerCard = document.getElementById('pickerCard');
           const scoreCard = document.getElementById('scoreCard');
+          const leaderState = getLeaderState(game);
 
           if (state.mode === 'spectator' && !state.color) {
-            applyPlayerTheme(null);
+            applyLeaderTheme(leaderState && !leaderState.isTie ? leaderState.leaders[0].color : null);
             prompt.hidden = true;
-            watchNote.hidden = false;
             gameOverNote.hidden = !game.gameOver;
             controls.hidden = true;
             pickerCard.hidden = true;
@@ -2796,7 +3234,6 @@ function renderTactaPage() {
           if (!state.color) {
             applyPlayerTheme(null);
             prompt.hidden = false;
-            watchNote.hidden = true;
             gameOverNote.hidden = !game.gameOver;
             controls.hidden = true;
             pickerCard.hidden = false;
@@ -2812,7 +3249,6 @@ function renderTactaPage() {
 
           applyPlayerTheme(state.color);
           prompt.hidden = true;
-          watchNote.hidden = true;
           gameOverNote.hidden = !game.gameOver;
           controls.hidden = false;
           pickerCard.hidden = true;
@@ -2843,7 +3279,9 @@ function renderTactaPage() {
           }
 
           renderSeatPicker(game);
+          renderWatchLastPoints(game);
           renderScoreboard(game);
+          renderLastPoints(game);
           renderCurrentPlayer(game);
           showView('room');
         }
@@ -3015,6 +3453,7 @@ function renderTactaPage() {
             });
 
             renderGame(data.game);
+            showScoreFlash(kind, points);
             clearStatus();
           } catch (err) {
             setStatus(err.message, 'error');
@@ -3251,6 +3690,7 @@ app.post('/api/tacta/play', (req, res) => {
     color,
     clientId,
     kind: 'play',
+    points,
     scoreDelta,
     cardsDelta,
     at: nowIso
@@ -3314,6 +3754,7 @@ app.post('/api/tacta/penalty', (req, res) => {
     color,
     clientId,
     kind: 'penalty',
+    points,
     scoreDelta,
     cardsDelta: 0,
     at: nowIso
