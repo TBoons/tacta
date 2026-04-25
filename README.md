@@ -4,8 +4,6 @@ Phone-friendly scorekeeping for the card game Tacta.
 
 This repo contains the Node/Express code currently used to serve the Tacta scorekeeper at:
 
-- `http://tboons.ddns.net:3000/tacta`
-
 ## What It Does
 
 - creates short-lived 4-digit game rooms
